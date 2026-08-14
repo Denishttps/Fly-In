@@ -1,10 +1,19 @@
-from pydantic import BaseModel, Field
-from core.models.node import Node
+from .node import Node
 
 
-class Drone(BaseModel):
-    id: int = Field(..., description="Unique identifier for the drone")
-    x: float = Field(..., description="X-coordinate of the drone's position")
-    y: float = Field(..., description="Y-coordinate of the drone's position")
-    
-    hub: Node | None = Field(None, description="The hub node where the drone is currently located")
+class Drone:
+    def __init__(
+        self,
+        id: int,
+        hub: Node,
+        color: str | None = None
+    ):
+        self.id = id
+        self.hub = hub
+        self.color = color
+
+    def go_to(self, other: Node) -> bool:
+        if self.hub.is_neighbor(other):
+            self.hub.remove_drone(self.id)
+            other.add_drone(self.id)
+            self.hub = other
