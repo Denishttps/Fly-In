@@ -1,5 +1,5 @@
-from core.models.graph import Graph
-from core.models.node import Node, NodeMetaData
+from .models.graph import Graph
+from .models.node import Node, NodeMetaData
 
 from .models.map import RawHub, RawConnection
 

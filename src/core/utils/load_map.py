@@ -1,7 +1,7 @@
-from core.models.graph import Graph
-from core.parser import MapTextParser
+from ..models.graph import Graph
+from ..parser import MapTextParser
 
-from core.graph_factory import GraphFactory
+from ..graph_factory import GraphFactory
 
 
 def load_map_from_file(file_path: str) -> tuple[int, Graph]:

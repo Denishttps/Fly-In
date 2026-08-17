@@ -28,9 +28,9 @@ class Node:
         self.y = y
         self.metadata = metadata
 
-        self.incoming_edges: list["Edge"] = []
-        self.outgoing_edges: list["Edge"] = []
+        self.edges: list["Edge"] = []
         self.occupants: set[int] = set()
+        self.usage_count: int = 0
 
     def is_available(self) -> bool:
         if self.metadata.zone == ZoneType.BLOCKED:
@@ -47,47 +47,55 @@ class Node:
     def remove_drone(self, drone_id: int) -> None:
         self.occupants.remove(drone_id)
 
-    def get_neighbors(
-        self,
-        in_only: bool = False,
-        out_only: bool = False
-    ) -> list["Node"]:
-        if in_only and out_only:
-            raise ValueError("Choose either in_only or out_only, not both")
-
-        if out_only:
-            edges = self.outgoing_edges
-        elif in_only:
-            edges = self.incoming_edges
-        else:
-            edges = self.incoming_edges + self.outgoing_edges
-
-        return [edge.get_opposite(self) for edge in edges]
+    def get_neighbors(self) -> list["Node"]:
+        return [edge.get_opposite(self) for edge in self.edges]
 
     def is_neighbor(self, other: "Node") -> bool:
+        """Проверяет, соединен ли этот узел с other."""
         return other in self.get_neighbors()
 
     def get_edge_to(self, other: "Node") -> "Edge | None":
-        for edge in self.outgoing_edges:
-            if edge.target == other:
+        for edge in self.edges:
+            if edge.get_opposite(self) == other:
                 return edge
         return None
 
-    def get_edge_between(
-        self,
-        other: "Node",
-        directed: bool = True
-    ) -> "Edge | None":
-        edge = self.get_edge_to(other)
-        if edge is not None:
-            return edge
+    def get_step_cost(self, target: Node) -> float:
+        edge = self.get_edge_to(target)
+        cap_current = (
+            self.metadata.max_drones
+            if self.metadata.max_drones != -1 else 999_999
+        )
+        cap_target = (
+            target.metadata.max_drones
+            if target.metadata.max_drones != -1 else 999_999
+        )
+        throughput = min(cap_current, edge.max_capacity, cap_target)
 
-        if not directed:
-            for edge in self.incoming_edges:
-                if edge.source == other:
-                    return edge
+        k = target.usage_count + 1
 
-        return None
+        capacity_delay = k / max(throughput, 1)
+
+        return target.base_cost + capacity_delay
+
+    @property
+    def base_cost(self) -> float:
+        zone = self.metadata.zone
+        if zone == ZoneType.BLOCKED:
+            return float("inf")
+        if zone == ZoneType.RESTRICTED:
+            return 2.0
+        if zone == ZoneType.PRIORITY:
+            return 0.8
+        return 1.0
+
+    @property
+    def effective_capacity(self) -> int:
+        if self.metadata.max_drones == -1:
+            return 999_999
+
+        total_link_capacity = sum(e.max_capacity for e in self.edges) or 1
+        return min(self.metadata.max_drones, total_link_capacity)
 
     def __repr__(self) -> str:
         zone = self.metadata.zone.value
@@ -126,8 +134,8 @@ class Edge:
         self.max_capacity = max_capacity
         self.transits: list[tuple[str, int]] = []
 
-        self.source.outgoing_edges.append(self)
-        self.target.incoming_edges.append(self)
+        self.source.edges.append(self)
+        self.target.edges.append(self)
 
     @property
     def travel_cost(self) -> int:

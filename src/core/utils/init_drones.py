@@ -1,5 +1,5 @@
-from core.models.graph import Graph
-from core.models.drone import Drone
+from ..models.graph import Graph
+from ..models.drone import Drone
 
 
 def init_drones(count: int, graph: Graph) -> None:
