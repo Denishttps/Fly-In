@@ -1,4 +1,4 @@
-from .node import Node, Edge
+from .node import Node, Edge, ZoneType
 
 
 class Graph:
@@ -30,10 +30,10 @@ class Graph:
             self.end_node = node
 
     def add_edge(
-            self,
-            source_name: str,
-            target_name: str,
-            max_capacity: int = 1
+        self,
+        source_name: str,
+        target_name: str,
+        max_capacity: int = 1
     ) -> Edge:
         source = self.get_node(source_name)
         target = self.get_node(target_name)
