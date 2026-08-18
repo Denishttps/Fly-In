@@ -51,7 +51,6 @@ class Node:
         return [edge.get_opposite(self) for edge in self.edges]
 
     def is_neighbor(self, other: "Node") -> bool:
-        """Проверяет, соединен ли этот узел с other."""
         return other in self.get_neighbors()
 
     def get_edge_to(self, other: "Node") -> "Edge | None":
@@ -60,8 +59,10 @@ class Node:
                 return edge
         return None
 
-    def get_step_cost(self, target: Node) -> float:
+    def get_step_cost(self, target: "Node") -> float:
         edge = self.get_edge_to(target)
+        edge_capacity = edge.max_capacity if edge else 999_999
+
         cap_current = (
             self.metadata.max_drones
             if self.metadata.max_drones != -1 else 999_999
@@ -70,10 +71,9 @@ class Node:
             target.metadata.max_drones
             if target.metadata.max_drones != -1 else 999_999
         )
-        throughput = min(cap_current, edge.max_capacity, cap_target)
+        throughput = min(cap_current, edge_capacity, cap_target)
 
         k = target.usage_count + 1
-
         capacity_delay = k / max(throughput, 1)
 
         return target.base_cost + capacity_delay
@@ -102,24 +102,17 @@ class Node:
         drones = self.metadata.max_drones
         drones_str = drones if drones > 0 else float("inf")
         return (
-            f"Node("
-            f"name={self.name!r}, "
-            f"x={self.x}, "
-            f"y={self.y}, "
-            f"zone={zone!r}, "
-            f"max_drones={drones_str!r}"
-            f")"
+            f"Node(name={self.name!r}, x={self.x}, y={self.y}, "
+            f"zone={zone!r}, max_drones={drones_str!r})"
         )
 
     def __eq__(self, value: object) -> bool:
         if not isinstance(value, Node):
             return False
-        return (
-            self.name == value.name and
-            self.x == value.x and
-            self.y == value.y and
-            self.metadata == value.metadata
-        )
+        return self.name == value.name
+
+    def __hash__(self) -> int:
+        return hash(self.name)
 
 
 class Edge:
@@ -132,7 +125,6 @@ class Edge:
         self.source = source
         self.target = target
         self.max_capacity = max_capacity
-        self.transits: list[tuple[str, int]] = []
 
         self.source.edges.append(self)
         self.target.edges.append(self)
@@ -140,23 +132,6 @@ class Edge:
     @property
     def travel_cost(self) -> int:
         return 2 if self.target.metadata.zone == ZoneType.RESTRICTED else 1
-
-    def is_available(self, tick: int) -> bool:
-        return len(self._reservations[tick]) < self.max_capacity
-
-    def reserve(self, drone_id: int, tick: int) -> bool:
-        if not self.is_available(tick):
-            return False
-        self._reservations[tick].add(drone_id)
-        return True
-
-    def cancel_reservation(self, drone_id: int, tick: int) -> None:
-        self._reservations[tick].discard(drone_id)
-
-    def cleanup_old_ticks(self, current_tick: int) -> None:
-        old_ticks = [t for t in self._reservations if t < current_tick]
-        for t in old_ticks:
-            del self._reservations[t]
 
     def get_opposite(self, node: Node) -> Node:
         if node == self.source:
@@ -167,8 +142,7 @@ class Edge:
 
     def __repr__(self) -> str:
         return (
-            f"Edge(source={self.source.name!r}, "
-            f"target={self.target.name!r}, "
+            f"Edge(source={self.source.name!r}, target={self.target.name!r}, "
             f"max_capacity={self.max_capacity})"
         )
 
@@ -176,7 +150,10 @@ class Edge:
         if not isinstance(value, Edge):
             return False
         return (
-            self.source == value.source and
-            self.target == value.target and
-            self.max_capacity == value.max_capacity
+            self.source == value.source and self.target == value.target
+        ) or (
+            self.source == value.target and self.target == value.source
         )
+
+    def __hash__(self) -> int:
+        return hash(frozenset({self.source.name, self.target.name}))
