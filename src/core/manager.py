@@ -4,7 +4,6 @@ from .models.graph import Graph, Edge
 from .models.drone import Drone, MoveRequest
 
 from .models.tick_result import DroneTickInfo, TickResult
-from .models.node import ZoneType
 
 
 class SimulationManager:
@@ -12,15 +11,14 @@ class SimulationManager:
         self.graph = graph
         self.drones = drones
         self.current_tick: int = 0
-        self.current_duty: int = 0
-        
+
     @property
     def is_finished(self) -> bool:
         return all(dr.is_finished for dr in self.drones)
-    
+
     @property
     def total_time(self) -> int:
-        return self.current_tick + self.current_duty
+        return self.current_tick
 
     def _intent(self) -> list[MoveRequest]:
         requests = []
@@ -42,6 +40,13 @@ class SimulationManager:
             v.sort(key=lambda m: (m.priority, -m.drone.id), reverse=True)
 
         return groups
+
+    def _advance_transits(self) -> None:
+        for dr in self.drones:
+            if not dr.in_transit:
+                continue
+            if dr.advance_transit():
+                dr.complete_transit()
 
     def _execute(self, groups: dict[str, list["MoveRequest"]]) -> None:
         executed_drones: set[int] = set()
@@ -76,15 +81,15 @@ class SimulationManager:
     def _apply_move(
         self, req: MoveRequest, edge_usage: dict[Edge, int], executed_drones: set[int]
     ) -> None:
-        req.drone.move_to(req.target_node)
-        
         if req.edge:
             edge_usage[req.edge] += 1
 
         executed_drones.add(req.drone.id)
-        
-        if req.target_node.metadata.zone == ZoneType.RESTRICTED:
-            self.current_duty += 1
+
+        if req.travel_ticks > 1:
+            req.drone.start_transit(req)
+        else:
+            req.drone.move_to(req.target_node)
 
     def _penalize_waiting(
         self, groups: dict[str, list[MoveRequest]], executed_drones: set[int]
@@ -97,11 +102,23 @@ class SimulationManager:
     def _get_drone_statuses(self) -> list[DroneTickInfo]:
         statuses = []
         for drone in sorted(self.drones, key=lambda d: d.id):
-            statuses.append(DroneTickInfo(
-                drone_id=drone.id,
-                node_name=drone.current_node.name,
-                is_finished=drone.is_finished
-            ))
+            if drone.in_transit and drone.transit_edge is not None:
+                statuses.append(DroneTickInfo(
+                    drone_id=drone.id,
+                    node_name=None,
+                    connection_name=(
+                        f"{drone.transit_edge.source.name}"
+                        f"_{drone.transit_edge.target.name}"
+                    ),
+                    is_finished=False
+                ))
+            else:
+                statuses.append(DroneTickInfo(
+                    drone_id=drone.id,
+                    node_name=drone.current_node.name,
+                    connection_name=None,
+                    is_finished=drone.is_finished
+                ))
         return statuses
 
     def step(self) -> TickResult | None:
@@ -110,15 +127,16 @@ class SimulationManager:
 
         self.current_tick += 1
 
+        self._advance_transits()
+
         requests = self._intent()
         if requests:
             groups = self._create_request_groups(requests)
             self._execute(groups)
-            
+
         return TickResult(
             tick=self.current_tick,
             is_finished=self.is_finished,
-            duty=self.current_duty,
             total_time=self.total_time,
             drones=self._get_drone_statuses()
         )

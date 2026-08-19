@@ -13,7 +13,7 @@ from dispatcher import Dispatcher
 
 def main():
     dp = Dispatcher("maps/hard/02_capacity_hell.txt")
-    history = dp.compute_all()
+    history = dp.print_simulation()
     renderer = PyGameRenderer(
         dp.graph,
         history,

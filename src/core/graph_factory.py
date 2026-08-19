@@ -26,6 +26,21 @@ class GraphFactory:
             graph.add_node(node, is_start=hub.is_start, is_end=hub.is_end)
 
         for conn in connections:
+            if conn.source not in graph.nodes:
+                raise ValueError(
+                    f"Connection references undefined zone: '{conn.source}'"
+                )
+            if conn.target not in graph.nodes:
+                raise ValueError(
+                    f"Connection references undefined zone: '{conn.target}'"
+                )
+            if graph.has_edge(conn.source, conn.target):
+                raise ValueError(
+                    f"Duplicate connection: "
+                    f"'{conn.source}-{conn.target}' "
+                    "(a-b and b-a are considered the same connection)"
+                )
+
             graph.add_edge(conn.source, conn.target, conn.max_capacity)
 
         return graph

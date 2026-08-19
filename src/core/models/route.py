@@ -20,6 +20,12 @@ class Route:
         return any(n.name == node_name for n in self.nodes)
 
     @property
+    def node_names(self) -> frozenset[str]:
+        if len(self.nodes) <= 2:
+            return frozenset()
+        return frozenset(n.name for n in self.nodes[1:-1])
+
+    @property
     def bottleneck_capacity(self) -> int:
         if len(self.nodes) < 2:
             return 1

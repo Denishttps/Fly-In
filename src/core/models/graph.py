@@ -5,6 +5,7 @@ class Graph:
     def __init__(self) -> None:
         self.nodes: dict[str, Node] = {}
         self.edges: list[Edge] = []
+        self._edge_keys: set[frozenset[str]] = set()
         self.start_node: Node | None = None
         self.end_node: Node | None = None
 
@@ -29,17 +30,28 @@ class Graph:
                 raise ValueError("Multiple end nodes defined")
             self.end_node = node
 
+    def has_edge(self, source_name: str, target_name: str) -> bool:
+        return frozenset({source_name, target_name}) in self._edge_keys
+
     def add_edge(
         self,
         source_name: str,
         target_name: str,
         max_capacity: int = 1
     ) -> Edge:
+        key = frozenset({source_name, target_name})
+        if key in self._edge_keys:
+            raise ValueError(
+                f"Duplicate connection: '{source_name}-{target_name}' "
+                "(a-b and b-a are considered the same connection)"
+            )
+
         source = self.get_node(source_name)
         target = self.get_node(target_name)
 
         edge = Edge(source=source, target=target, max_capacity=max_capacity)
         self.edges.append(edge)
+        self._edge_keys.add(key)
         return edge
 
     def get_node(self, name: str) -> Node:
