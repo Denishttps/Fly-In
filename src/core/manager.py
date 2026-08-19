@@ -3,7 +3,7 @@ from collections import defaultdict
 from .models.graph import Graph, Edge
 from .models.drone import Drone, MoveRequest
 
-from .models.tick_result import DroneTickInfo, TickResult
+from .models.tick_models import DroneTickInfo, TickResult
 
 
 class SimulationManager:

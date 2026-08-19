@@ -1,0 +1,4 @@
+
+
+class NoPlanFoundError(RuntimeError):
+    pass

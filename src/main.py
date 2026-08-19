@@ -12,7 +12,7 @@ from dispatcher import Dispatcher
 
 
 def main():
-    dp = Dispatcher("maps/hard/02_capacity_hell.txt")
+    dp = Dispatcher("maps/hard/03_ultimate_challenge.txt")
     history = dp.print_simulation()
     renderer = PyGameRenderer(
         dp.graph,

@@ -1,27 +1,88 @@
 from core.utils.load_map import load_map_from_file
 from core.manager import SimulationManager
 
-from core.models.tick_result import TickResult, DroneTickInfo
+from core.models.tick_models import TickResult, DroneTickInfo
 from core.pathfinding import Dijkstra
 
+from core.models.reservation import ReservationTable
+from core.time_expanded_planner import SpaceTimeAStar, DronePlan
+
 from core.utils.init_drones import init_drones
-from core.models.graph import Graph
 
 from core.models.drone import Drone
 from core.models.route import Route
 
 
+Strategy = str
+
+
 class Dispatcher:
-    def __init__(self, file_path: str) -> None:
+    def __init__(self, file_path: str, strategy: Strategy = "time_expanded") -> None:
         self.count, self.graph = load_map_from_file(file_path)
         self.drones = init_drones(self.count, self.graph)
-        self.routes = self._get_routes()
+        self.strategy = strategy
 
-        Dispatcher.assign_routes(self.drones, self.routes)
         self._history: list[TickResult] = []
         self._prev_positions: dict[int, str | None] = {}
 
+        self.routes: list[Route] = []
+        self.plans: dict[int, DronePlan] = {}
+
+        if strategy == "time_expanded":
+            self.plans = self._plan_time_expanded()
+            self._history = self._build_history_from_plans()
+        else:
+            self.routes = self._get_routes()
+            Dispatcher.assign_routes(self.drones, self.routes)
+
+    def _plan_time_expanded(self) -> dict[int, DronePlan]:
+        reservations = ReservationTable()
+        planner = SpaceTimeAStar(self.graph, reservations)
+
+        plans: dict[int, DronePlan] = {}
+        for drone in sorted(self.drones, key=lambda d: d.id):
+            plans[drone.id] = planner.plan(drone.id)
+
+        return plans
+
+    def _build_history_from_plans(self) -> list[TickResult]:
+        if not self.plans:
+            return []
+
+        makespan = max(plan.makespan for plan in self.plans.values())
+        total = len(self.plans)
+
+        history: list[TickResult] = []
+        for tick in range(1, makespan + 1):
+            infos = [
+                self.plans[drone_id].info_at(tick)
+                for drone_id in sorted(self.plans)
+            ]
+            finished = sum(1 for info in infos if info.is_finished)
+            history.append(
+                TickResult(
+                    tick=tick,
+                    is_finished=(finished == total),
+                    total_time=tick,
+                    drones=infos,
+                )
+            )
+
+        return history
+
+    @property
+    def total_turns(self) -> int:
+        return self._history[-1].tick if self._history else 0
+
+    @property
+    def average_turns_per_drone(self) -> float:
+        if not self.plans:
+            return 0.0
+        return sum(p.makespan for p in self.plans.values()) / len(self.plans)
+
     def _get_routes(self) -> list[Route]:
+        if self.graph.end_node is None:
+            raise ValueError("Graph has no end zone defined.")
         dj = Dijkstra(self.graph)
         return dj.find(self.graph.end_node)
 
@@ -93,21 +154,30 @@ class Dispatcher:
                 self._history.append(tick_result)
 
     def compute_all(self, max_ticks: int = 1000) -> list[TickResult]:
+        if self.strategy == "time_expanded":
+            return self._history
         self._run_simulation(max_ticks)
         return self._history
 
     def print_simulation(self, max_ticks: int = 1000) -> list[TickResult]:
         self._prev_positions = {}
-        manager = SimulationManager(self.graph, self.drones)
 
+        if self.strategy == "time_expanded":
+            for tick_result in self._history:
+                line = self._format_tick_line(tick_result)
+                if line is not None:
+                    print(line)
+            return self._history
+
+        manager = SimulationManager(self.graph, self.drones)
         while not manager.is_finished and manager.current_tick < max_ticks:
-            tick_result = manager.step()
-            if tick_result is None:
+            step_result: TickResult | None = manager.step()
+            if step_result is None:
                 continue
 
-            self._history.append(tick_result)
+            self._history.append(step_result)
 
-            line = self._format_tick_line(tick_result)
+            line = self._format_tick_line(step_result)
             if line is not None:
                 print(line)
 

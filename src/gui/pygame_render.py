@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core.models.graph import Graph
-    from core.models.tick_result import TickResult
+    from src.core.models.tick_models import TickResult
 
 
 BG_COLOR = (24, 28, 36)
