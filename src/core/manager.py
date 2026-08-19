@@ -1,9 +1,10 @@
 from collections import defaultdict
 
-from .models.graph import Graph
+from .models.graph import Graph, Edge
 from .models.drone import Drone, MoveRequest
 
-from .models.node import Edge, ZoneType
+from .models.tick_result import DroneTickInfo, TickResult
+from .models.node import ZoneType
 
 
 class SimulationManager:
@@ -30,8 +31,7 @@ class SimulationManager:
         return requests
 
     def _create_request_groups(
-        self,
-        requests: list[MoveRequest]
+        self, requests: list[MoveRequest]
     ) -> dict[str, list[MoveRequest]]:
         groups: dict[str, list[MoveRequest]] = defaultdict(list)
 
@@ -66,11 +66,7 @@ class SimulationManager:
 
         self._penalize_waiting(groups, executed_drones)
 
-    def _can_traverse(
-        self,
-        req: MoveRequest,
-        edge_usage: dict[Edge, int]
-    ) -> bool:
+    def _can_traverse(self, req: MoveRequest, edge_usage: dict[Edge, int]) -> bool:
         node_has_space = req.target_node.is_available()
         edge_has_space = (
             req.edge is None or edge_usage[req.edge] < req.edge.max_capacity
@@ -78,12 +74,10 @@ class SimulationManager:
         return node_has_space and edge_has_space
 
     def _apply_move(
-        self,
-        req: MoveRequest,
-        edge_usage: dict[Edge, int],
-        executed_drones: set[int]
+        self, req: MoveRequest, edge_usage: dict[Edge, int], executed_drones: set[int]
     ) -> None:
         req.drone.move_to(req.target_node)
+        
         if req.edge:
             edge_usage[req.edge] += 1
 
@@ -93,18 +87,26 @@ class SimulationManager:
             self.current_duty += 1
 
     def _penalize_waiting(
-        self,
-        groups: dict[str, list[MoveRequest]],
-        executed_drones: set[int]
+        self, groups: dict[str, list[MoveRequest]], executed_drones: set[int]
     ) -> None:
         for req_list in groups.values():
             for req in req_list:
                 if req.drone.id not in executed_drones:
                     req.drone.wait()
 
-    def step(self) -> None:
+    def _get_drone_statuses(self) -> list[DroneTickInfo]:
+        statuses = []
+        for drone in sorted(self.drones, key=lambda d: d.id):
+            statuses.append(DroneTickInfo(
+                drone_id=drone.id,
+                node_name=drone.current_node.name,
+                is_finished=drone.is_finished
+            ))
+        return statuses
+
+    def step(self) -> TickResult | None:
         if self.is_finished:
-            return
+            return None
 
         self.current_tick += 1
 
@@ -113,27 +115,10 @@ class SimulationManager:
             groups = self._create_request_groups(requests)
             self._execute(groups)
             
-        tick_output = self._format_tick_output()
-        if tick_output:
-            print(tick_output)
-            
-    def _format_tick_output(self) -> str:
-        drones_status = []
-
-        for drone in sorted(self.drones, key=lambda d: d.id):
-            if not drone.is_finished or getattr(drone, "finished_on_tick", None) == self.current_tick:
-                node_name = drone.current_node.name
-                drones_status.append(f"D{drone.id}-{node_name}")
-
-        return " ".join(drones_status)
-
-    def run(self, max_ticks: int = 1000) -> None:
-        while not self.is_finished and self.current_tick < max_ticks:
-            self.step()
-            
-        print(
-            f"Симуляция завершена!\n"
-            f"  • Реальных тиков: {self.current_tick}\n"
-            f"  • Долг (штрафы):  {self.current_duty}\n"
-            f"  • Итоговое время: {self.total_time}"
+        return TickResult(
+            tick=self.current_tick,
+            is_finished=self.is_finished,
+            duty=self.current_duty,
+            total_time=self.total_time,
+            drones=self._get_drone_statuses()
         )

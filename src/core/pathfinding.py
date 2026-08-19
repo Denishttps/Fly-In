@@ -59,7 +59,7 @@ class Dijkstra(PathFinder):
         for node in route.nodes[1:-1]:
             node.usage_count += 1
 
-    def find(self, end_node: Node, k: int = 5) -> list[Route]:
+    def find(self, end_node: Node, k: int = 7) -> list[Route]:
         paths = []
         seen_signatures: set[tuple[str, ...]] = set()
 
