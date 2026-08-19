@@ -1,12 +1,3 @@
-
-
-import sys
-from core.manager import SimulationManager
-from core.utils.load_map import load_map_from_file
-
-from core.pathfinding import Dijkstra
-
-from core.utils.init_drones import init_drones
 from gui.pygame_render import PyGameRenderer
 from dispatcher import Dispatcher
 
@@ -24,7 +15,6 @@ def main():
         height=800
     )
     renderer.run()
-
 
 
 if __name__ == "__main__":

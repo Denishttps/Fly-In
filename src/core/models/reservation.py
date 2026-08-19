@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 
-from .node import Node, Edge
+from .edge import Edge
+from .node import Node
 
 
 UNLIMITED = 999_999

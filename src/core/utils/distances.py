@@ -1,7 +1,9 @@
 import heapq
 
 from ..models.graph import Graph
-from ..models.node import Node, ZoneType
+from ..models.node import Node
+
+from ..models.zone_type import ZoneType
 
 
 def compute_goal_distances(graph: Graph) -> dict[str, float]:
