@@ -1,6 +1,7 @@
 
 
 import sys
+from core.manager import SimulationManager
 from core.utils.load_map import load_map_from_file
 
 from core.pathfinding import Dijkstra
@@ -10,14 +11,13 @@ from core.dispatcher import Dispatcher
 
 
 def main():
-    count, graph = load_map_from_file("/home/dbobrov/Projects/github/Fly-In/maps/hard/03_ultimate_challenge.txt")
-    print(graph.start_node)
-    print(graph.start_node.get_neighbors())
+    count, graph = load_map_from_file("maps/hard/02_capacity_hell.txt")
     dj = Dijkstra(graph)
     routes = dj.find(graph.end_node)
     drones = init_drones(count, graph)
     Dispatcher.assign_routes(drones, routes)
-    print([d.route.id for d in drones])
+    manager = SimulationManager(graph, drones)
+    manager.run()
 
 
 
