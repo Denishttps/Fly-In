@@ -3,7 +3,7 @@ from dispatcher import Dispatcher
 
 
 def main():
-    dp = Dispatcher("maps/hard/03_ultimate_challenge.txt")
+    dp = Dispatcher("maps/challenger/01_the_impossible_dream.txt")
     history = dp.print_simulation()
     renderer = PyGameRenderer(
         dp.graph,
