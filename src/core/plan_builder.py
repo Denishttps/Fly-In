@@ -19,6 +19,7 @@ class PlanBuilder:
     ) -> DronePlan:
         transitions: list[tuple[str, str | None, State, State]] = []
         state = goal_state
+
         while state in came_from:
             prev_state, action, edge_key = came_from[state]
             transitions.append((action, edge_key, prev_state, state))
@@ -35,7 +36,9 @@ class PlanBuilder:
             if action == "wait":
                 self.reservations.reserve_node(to_node, to_tick)
                 steps.append(
-                    PlannedStep(tick=to_tick, node_name=to_name, connection_name=None)
+                    PlannedStep(
+                        tick=to_tick, node_name=to_name, connection_name=None
+                    )
                 )
             else:
                 from_node = self.graph.get_node(from_name)
@@ -55,7 +58,11 @@ class PlanBuilder:
                         )
                     )
                 steps.append(
-                    PlannedStep(tick=to_tick, node_name=to_name, connection_name=None)
+                    PlannedStep(
+                        tick=to_tick, node_name=to_name, connection_name=None
+                    )
                 )
 
-        return DronePlan(drone_id=drone_id, end_node_name=goal_name, steps=steps)
+        return DronePlan(
+            drone_id=drone_id, end_node_name=goal_name, steps=steps
+        )
