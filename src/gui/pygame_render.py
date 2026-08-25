@@ -36,7 +36,7 @@ class PyGameRenderer:
         self.scale = scale
         self.offset_x, self.offset_y = offset
         
-        self.screen = pygame.display.set_mode((self.width, self.height))
+        self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
         pygame.display.set_caption("Drone Simulation — Replay")
         self.clock = pygame.time.Clock()
         

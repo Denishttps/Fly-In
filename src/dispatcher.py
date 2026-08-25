@@ -37,14 +37,33 @@ class Dispatcher:
 
         return plans
 
+    def _get_zero_tick(self, drone: DronePlan) -> DroneTickInfo:
+        return DroneTickInfo(
+            drone.drone_id,
+            self.graph.start_node.name
+        )
+
     def _build_history_from_plans(self) -> list[TickResult]:
         if not self.plans:
             return []
+
+        first_infos = [
+            self._get_zero_tick(self.plans[drone_id])
+            for drone_id in sorted(self.plans)
+        ]
 
         makespan = max(plan.makespan for plan in self.plans.values())
         total = len(self.plans)
 
         history: list[TickResult] = []
+        history.append(
+            TickResult(
+                tick=0,
+                is_finished=False,
+                total_time=0,
+                drones=first_infos
+            )
+        )
         for tick in range(1, makespan + 1):
             infos = [
                 self.plans[drone_id].info_at(tick)
