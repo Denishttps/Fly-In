@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fly-In</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+    <div class="maps">
+        <label for="maps">Choose map:</label>
+        <select id="maps" name="maps"></select>
+        <button onclick="generateGraph()">Generate</button>
+    </div>
+    
+    <div class="screen">
+        <div class="content">
+            <svg class="container" width="100%" height="100%"></svg>
+        </div>
+    </div>
+    <script src="{{ url_for('static', path='script.js') }}"></script>
+</body>
+</html>

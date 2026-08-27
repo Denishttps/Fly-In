@@ -1,20 +1,44 @@
-from gui.pygame_render import PyGameRenderer
+import argparse
+import uvicorn
+
 from dispatcher import Dispatcher
+from app import app
+
+
+def init_app(
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    reload: bool = False,
+    **kwargs
+) -> None:
+    uvicorn.run(app, host=host, port=port, reload=reload, **kwargs)
 
 
 def main():
-    dp = Dispatcher("maps/challenger/01_the_impossible_dream.txt")
-    history = dp.print_simulation()
-    renderer = PyGameRenderer(
-        dp.graph,
-        history,
-        offset=(100, 200),
-        scale=100,
-        tick_duration=0.8,
-        width=1200,
-        height=800
+    parser = argparse.ArgumentParser("Fly-In")
+    
+    parser.add_argument(
+        "-p",
+        "--path",
+        type=str,
+        default="",
+        help="Path to file with map"
     )
-    renderer.run()
+    
+    parser.add_argument(
+        "-w",
+        "--web",
+        action="store_true",
+        help="Enable web interface"
+    )
+    
+    args = parser.parse_args()
+    
+    if args.web:
+        init_app()
+    else:
+        dp = Dispatcher(args.path)
+        dp.print_simulation()
 
 
 if __name__ == "__main__":

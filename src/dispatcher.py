@@ -12,8 +12,13 @@ from core.models.plan_models import DronePlan
 
 class Dispatcher:
     def __init__(self, file_path: str) -> None:
-        self.count, self.graph = load_map_from_file(file_path)
-        self.drones = init_drones(self.count, self.graph)
+        try:
+            self.count, self.graph = load_map_from_file(file_path)
+            self.drones = init_drones(self.count, self.graph)
+        except FileNotFoundError:
+            exit(1)
+        finally:
+            print("19 str dispatcher")
 
         self._history: list[TickResult] = []
         self._prev_positions: dict[int, str | None] = {}
@@ -60,7 +65,6 @@ class Dispatcher:
             TickResult(
                 tick=0,
                 is_finished=False,
-                total_time=0,
                 drones=first_infos
             )
         )
@@ -74,7 +78,6 @@ class Dispatcher:
                 TickResult(
                     tick=tick,
                     is_finished=(finished == total),
-                    total_time=tick,
                     drones=infos,
                 )
             )

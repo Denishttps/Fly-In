@@ -13,5 +13,4 @@ class DroneTickInfo:
 class TickResult:
     tick: int
     is_finished: bool
-    total_time: int
     drones: list[DroneTickInfo]

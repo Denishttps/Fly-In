@@ -5,7 +5,7 @@ from .models.plan_models import DronePlan
 from .plan_builder import PlanBuilder
 
 from .search.base import SpaceTimeSearch
-from .time_errors import NoPlanFoundError
+from .errors import NoPlanFoundError
 
 
 class DronePlanner:
