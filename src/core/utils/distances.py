@@ -26,7 +26,9 @@ def compute_goal_distances(graph: Graph) -> dict[str, float]:
             if neighbor.metadata.zone == ZoneType.BLOCKED:
                 continue
 
-            step = 2.0 if neighbor.metadata.zone == ZoneType.RESTRICTED else 1.0
+            step = (
+                2.0 if neighbor.metadata.zone == ZoneType.RESTRICTED else 1.0
+            )
             nd = d + step
 
             if nd < dist.get(neighbor.name, float("inf")):

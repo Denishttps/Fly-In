@@ -16,7 +16,7 @@ def init_app(
 
 def main():
     parser = argparse.ArgumentParser("Fly-In")
-    
+
     parser.add_argument(
         "-p",
         "--path",
@@ -24,19 +24,21 @@ def main():
         default="",
         help="Path to file with map"
     )
-    
+
     parser.add_argument(
         "-w",
         "--web",
         action="store_true",
         help="Enable web interface"
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.web:
         init_app()
     else:
+        if not args.path:
+            raise argparse.ArgumentError()
         dp = Dispatcher(args.path)
         dp.print_simulation()
 

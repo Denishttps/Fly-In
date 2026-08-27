@@ -22,13 +22,12 @@ def get_simulation(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Map not found"
         )
-    # except Exception as e:
-    #     print(e)
-    #     raise HTTPException(
-    #         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-    #         detail="Server Error"
-    #     )
-        
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server Error"
+        )
+
 
 @router.get("/getMaps")
 def get_maps(

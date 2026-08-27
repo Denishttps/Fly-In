@@ -50,7 +50,60 @@ function createScaler(bounds, containerWidth, containerHeight, padding = 50) {
     return scalePoint;
 }
 
-function createNode(container, node, scale, radius = 10) {
+function estimateTextWidth(text, fontSize) {
+    return text.length * fontSize * 0.6;
+}
+
+function planLabels(nodes, scale, baseFontSize = 10, minGap = 4) {
+    const scaledNodes = nodes.map(n => {
+        const p = scale(n.x, n.y);
+        return { node: n, x: p.x, y: p.y };
+    });
+
+    const rows = [];
+    const used = new Set();
+    for (let i = 0; i < scaledNodes.length; i++) {
+        if (used.has(i)) continue;
+        const row = [scaledNodes[i]];
+        used.add(i);
+        for (let j = i + 1; j < scaledNodes.length; j++) {
+            if (used.has(j)) continue;
+            if (Math.abs(scaledNodes[j].y - scaledNodes[i].y) < 5) {
+                row.push(scaledNodes[j]);
+                used.add(j);
+            }
+        }
+        row.sort((a, b) => a.x - b.x);
+        rows.push(row);
+    }
+
+    const plan = new Map();
+
+    for (const row of rows) {
+        for (let i = 0; i < row.length; i++) {
+            const label = row[i].node.name || "";
+            const prevGap = i > 0 ? row[i].x - row[i - 1].x : Infinity;
+            const nextGap = i < row.length - 1 ? row[i + 1].x - row[i].x : Infinity;
+            const availableGap = Math.min(prevGap, nextGap);
+
+            let fontSize = baseFontSize;
+            let textWidth = estimateTextWidth(label, fontSize);
+
+            while (textWidth > availableGap - minGap && fontSize > 6) {
+                fontSize -= 1;
+                textWidth = estimateTextWidth(label, fontSize);
+            }
+
+            const side = i % 2 === 0 ? "top" : "bottom";
+
+            plan.set(row[i].node, { fontSize, side });
+        }
+    }
+
+    return plan;
+}
+
+function createNode(container, node, scale, labelPlan, radius = 10) {
     const ns = "http://www.w3.org/2000/svg";
     let point = scale(node.x, node.y);
     let label = node.name;
@@ -64,11 +117,17 @@ function createNode(container, node, scale, radius = 10) {
     container.appendChild(circle);
 
     if (label !== undefined && label !== null) {
+        const { fontSize, side } = labelPlan.get(node) || { fontSize: 10, side: "top" };
         const text = document.createElementNS(ns, "text");
         text.setAttribute("x", point.x);
-        text.setAttribute("y", point.y - radius * 2 - 1);
+        text.setAttribute(
+            "y",
+            side === "top"
+                ? point.y - radius * 2 - 1
+                : point.y + radius * 2 + fontSize
+        );
         text.setAttribute("text-anchor", "middle");
-        text.setAttribute("font-size", "10");
+        text.setAttribute("font-size", fontSize);
         text.setAttribute("fill", "#333");
         text.textContent = label;
         container.appendChild(text);
@@ -96,8 +155,10 @@ async function generateGraph() {
         createLine(container, point1.x, point1.y, point2.x, point2.y);
     }
 
+    const labelPlan = planLabels(nodes, scale);
+
     for (let i = 0; i < nodes.length; i++) {
-        createNode(container, nodes[i], scale);
+        createNode(container, nodes[i], scale, labelPlan);
     }
 }
 
@@ -113,7 +174,7 @@ async function createMapsChoose() {
     const response = await fetch("/api/v1/getMaps");
     let data = await response.json();
     const maps_el = document.querySelector("#maps");
-    
+
     if (data.length == 0) {
         return null;
     }

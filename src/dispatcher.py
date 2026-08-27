@@ -129,4 +129,5 @@ class Dispatcher:
             line = self._format_tick_line(tick_result)
             if line is not None:
                 print(line)
+
         return self._history

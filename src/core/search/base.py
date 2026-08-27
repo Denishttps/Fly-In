@@ -97,7 +97,9 @@ class SpaceTimeSearch(ABC):
                 if arrival_tick > deadline:
                     continue
 
-                if not self.reservations.is_edge_free(edge, tick + 1, duration):
+                if not self.reservations.is_edge_free(
+                    edge, tick + 1, duration
+                ):
                     continue
                 if not self.reservations.is_node_free(neighbor, arrival_tick):
                     continue

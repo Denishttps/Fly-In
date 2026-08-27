@@ -32,7 +32,9 @@ class DronePlanner:
         start = self.graph.start_node
         goal = self.graph.end_node
         if start is None or goal is None:
-            raise ValueError("Graph must have both a start zone and an end zone.")
+            raise ValueError(
+                "Graph must have both a start zone and an end zone."
+            )
 
         if start.name == goal.name:
             return DronePlan(drone_id=drone_id, end_node_name=goal.name)
