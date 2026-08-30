@@ -184,7 +184,7 @@ async function createMapsChoose() {
         maps_el.appendChild(opt);
     }
 
-    maps_el.addEventListener('change', (event) => generateGraph())
+    maps_el.addEventListener('change', (event) => generateGraph());
 }
 
 createMapsChoose();
