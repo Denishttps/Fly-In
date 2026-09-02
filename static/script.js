@@ -136,7 +136,7 @@ function createNode(container, node, scale, labelPlan, radius = 10) {
 
 async function generateGraph() {
     const maps_el = document.querySelector("#maps");
-    const response = await fetch("/api/v1/simulation?path=" + maps_el.value);
+    const response = await fetch("http://127.0.0.1:8000" + "/api/v1/simulation?path=" + maps_el.value);
     const container = document.querySelector('.container');
     container.innerHTML = "";
 
@@ -163,25 +163,54 @@ async function generateGraph() {
 }
 
 function createOptionMap(map) {
-    const opt = document.createElement("option");
-    opt.textContent = map[0];
-    opt.value = map[1];
-    opt.classList.add("elMap");
-    return opt;
+    const optGroup = document.createElement("optgroup");
+    optGroup.label = map[0].group;
+
+    
+    for (let i = 0; i < map.length; i++)
+        {
+            const opt = document.createElement("option");
+            opt.textContent = map[i].name;
+            opt.value = map[i].path;
+            opt.classList.add("elMap");
+            optGroup.appendChild(opt);
+        }
+    console.log(optGroup)
+    return optGroup;
 }
 
 async function createMapsChoose() {
-    const response = await fetch("/api/v1/getMaps");
+    const response = await fetch("http://127.0.0.1:8000" + "/api/v1/getMaps");
     let data = await response.json();
     const maps_el = document.querySelector("#maps");
 
     if (data.length == 0) {
         return null;
     }
+    
+    let groups = {};
 
-    for (let i = 0; i < data.length; i++) {
-        let opt = createOptionMap(data[i]);
-        maps_el.appendChild(opt);
+    for (let i = 0; i < data.length; i++)
+    {
+        let name = data[i].group;
+        if (name in groups)
+        {
+            groups[name].push(data[i]);
+        }
+        else
+        {
+            groups[name] = [data[i]];
+        }
+    }
+
+    for (const key in groups) {
+        let optGr = createOptionMap(groups[key]);
+        console.log(optGr);
+        if (maps_el) {
+            maps_el.appendChild(optGr);
+        } else {
+            console.error("Элемент #mapSelect не найден в DOM");
+        }
     }
 
     maps_el.addEventListener('change', (event) => generateGraph());

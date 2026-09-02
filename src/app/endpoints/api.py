@@ -4,6 +4,8 @@ from ..services.simulation import SimulationService
 from ..dependencies import get_simulation_service
 from ..schemas.response import SimulationResponse
 
+from ..schemas.file import FileDTO
+
 
 router = APIRouter(
     prefix="/api/v1"
@@ -32,5 +34,5 @@ def get_simulation(
 @router.get("/getMaps")
 def get_maps(
     service: SimulationService = Depends(get_simulation_service)
-) -> list[tuple[str, str]]:
+) -> list[FileDTO]:
     return service.get_all_maps()

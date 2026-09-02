@@ -2,13 +2,24 @@ from app.schemas.tick import TickResultDTO
 from core.models import Node, Edge
 
 from ..schemas.graph import EdgeDTO, GraphDTO, NodeDTO
-from dispatcher import Dispatcher
-
 from ..schemas.response import SimulationResponse
+
+from dispatcher import Dispatcher
 from pathlib import Path
+
+from ..schemas.file import FileDTO
+
+from typing import ClassVar
 
 
 class SimulationService:
+    PRIORITY: ClassVar[dict[str, int]] = {
+            "easy": 1,
+            "medium": 2,
+            "hard": 3,
+            "challenger": 4
+        }
+
     def get_simulation(self, path: str) -> SimulationResponse:
         dp = Dispatcher(path)
         self.graph = dp.graph
@@ -22,15 +33,27 @@ class SimulationService:
             history=history_read
         )
 
-    def get_all_maps(self) -> list[str]:
+    def get_all_maps(self) -> list[FileDTO]:
         base_path = "maps"
         path = Path(base_path)
 
-        files = [
-            (file.name, file.as_posix()) for file in path.rglob("*")
-            if file.is_file() and str(file).endswith(".txt")
-        ]
-        return files
+        files: list[FileDTO] = []
+
+        for file in path.rglob("*"):
+            if not file.is_file() or not file.name.endswith(".txt"):
+                continue
+            files.append(
+                FileDTO(
+                    name=file.name,
+                    group=file.parent.name,
+                    path=file.as_posix()
+                )
+            )
+
+        return sorted(
+            files,
+            key=lambda f: (self.PRIORITY.get(f.group, 99), f.name)
+        )
 
     def _create_nodes(self, nodes: dict[str, Node]) -> list[NodeDTO]:
         result = []

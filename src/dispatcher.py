@@ -2,6 +2,7 @@ from core.drone_planner import DronePlanner
 from core.search.astar import AStarSearch
 
 from core.utils.load_map import load_map_from_file
+from core.errors import MapNotFound
 
 from core.models.tick_models import TickResult, DroneTickInfo
 from core.utils.init_drones import init_drones
@@ -16,9 +17,7 @@ class Dispatcher:
             self.count, self.graph = load_map_from_file(file_path)
             self.drones = init_drones(self.count, self.graph)
         except FileNotFoundError:
-            exit(1)
-        finally:
-            print("19 str dispatcher")
+            raise MapNotFound(f"Map {file_path} is not exists")
 
         self._history: list[TickResult] = []
         self._prev_positions: dict[int, str | None] = {}

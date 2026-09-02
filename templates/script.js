@@ -163,11 +163,18 @@ async function generateGraph() {
 }
 
 function createOptionMap(map) {
-    const opt = document.createElement("option");
-    opt.textContent = map[0];
-    opt.value = map[1];
-    opt.classList.add("elMap");
-    return opt;
+    const optGroup = document.createElement("optgroup");
+    optGroup.label = map.group;
+
+    for (let i = 0; i < map.length; i++)
+    {
+        const opt = document.createElement("option");
+        opt.textContent = map[i].name;
+        opt.value = map[i].path;
+        opt.classList.add("elMap");
+        optGroup.appendChild(opt);
+    }
+    return optGroup;
 }
 
 async function createMapsChoose() {
@@ -178,10 +185,25 @@ async function createMapsChoose() {
     if (data.length == 0) {
         return null;
     }
+    
+    let groups = {};
 
-    for (let i = 0; i < data.length; i++) {
-        let opt = createOptionMap(data[i]);
-        maps_el.appendChild(opt);
+    for (let i = 0; i < data.length; i++)
+    {
+        let name = data[i].group;
+        if (name in groups)
+        {
+            groups[name].push(data[i]);
+        }
+        else
+        {
+            groups[name] = [data[i]];
+        }
+    }
+
+    for (const key in groups) {
+        let optGr = createOptionMap(data[i]);
+        maps_el.appendChild(optGr);
     }
 
     maps_el.addEventListener('change', (event) => generateGraph());
