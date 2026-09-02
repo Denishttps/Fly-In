@@ -15,7 +15,7 @@ router = APIRouter(
 @router.get("/simulation", response_model=SimulationResponse)
 def get_simulation(
     path: str,
-    service: SimulationService = Depends(get_simulation_service)    
+    service: SimulationService = Depends(get_simulation_service)
 ) -> SimulationResponse:
     try:
         return service.get_simulation(path)
