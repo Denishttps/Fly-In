@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fly-In · Airspace Control</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #080a0e;
+            --bg-grad-1: #0b0f16;
+            --bg-grad-2: #060709;
+            --panel: #11151d;
+            --panel-2: #161c27;
+            --line: #212836;
+            --line-soft: #171d28;
+            --text: #eef2f7;
+            --text-dim: #8792a3;
+            --text-faint: #4c5568;
+            --cyan: #5be3ee;
+            --cyan-soft: rgba(91, 227, 238, .14);
+            --amber: #ffb648;
+            --amber-soft: rgba(255, 182, 72, .14);
+            --green: #52e3a4;
+            --green-soft: rgba(82, 227, 164, .14);
+            --red: #ff5d70;
+            --red-soft: rgba(255, 93, 112, .14);
+            --slate: #7a9cc9;
+            --slate-soft: rgba(122, 156, 201, .12);
+            --gold: #f4cf6a;
+            --mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+            --sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background:
+                radial-gradient(ellipse 1200px 700px at 50% -10%, #101825 0%, transparent 60%),
+                radial-gradient(ellipse 900px 600px at 100% 100%, #0d1420 0%, transparent 55%),
+                var(--bg);
+            color: var(--text);
+            font-family: var(--sans);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 20px 20px 28px;
+            gap: 14px;
+        }
+
+        /* ---------- Header ---------- */
+        header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            border-bottom: 1px solid var(--line);
+            padding-bottom: 14px;
+        }
+
+        .brand {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .eyebrow {
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: .22em;
+            color: var(--cyan);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .eyebrow .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--green);
+            box-shadow: 0 0 8px var(--green);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .35;
+            }
+        }
+
+        h1 {
+            margin: 0;
+            font-family: var(--mono);
+            font-weight: 700;
+            font-size: 26px;
+            letter-spacing: .02em;
+            color: var(--text);
+        }
+
+        h1 span {
+            color: var(--text-faint);
+            font-weight: 500;
+        }
+
+        .subtitle {
+            font-size: 12.5px;
+            color: var(--text-dim);
+            max-width: 520px;
+            line-height: 1.5;
+        }
+
+        .map-picker {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: flex-end;
+        }
+
+        .map-picker label {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: .14em;
+            color: var(--text-faint);
+            text-transform: uppercase;
+        }
+
+        select#mapSelect {
+            appearance: none;
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            color: var(--text);
+            font-family: var(--mono);
+            font-size: 13px;
+            padding: 9px 34px 9px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            min-width: 290px;
+            background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%);
+            background-position: calc(100% - 18px) center, calc(100% - 13px) center;
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+            transition: border-color .15s;
+        }
+
+        select#mapSelect:hover {
+            border-color: var(--cyan);
+        }
+
+        select#mapSelect:focus-visible {
+            outline: 2px solid var(--cyan);
+            outline-offset: 2px;
+        }
+
+        /* ---------- HUD stat strip ---------- */
+        .hud {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1px;
+            background: var(--line);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .hud .cell {
+            background: var(--panel);
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .hud .cell .label {
+            font-family: var(--mono);
+            font-size: 9.5px;
+            letter-spacing: .16em;
+            color: var(--text-faint);
+            text-transform: uppercase;
+        }
+
+        .hud .cell .value {
+            font-family: var(--mono);
+            font-size: 21px;
+            font-weight: 600;
+            color: var(--text);
+            font-variant-numeric: tabular-nums;
+            display: flex;
+            align-items: baseline;
+            gap: 5px;
+        }
+
+        .hud .cell .value .sub {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-faint);
+        }
+
+        .hud .cell .value.accent-green {
+            color: var(--green);
+        }
+
+        .hud .cell .value.accent-cyan {
+            color: var(--cyan);
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .06em;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-top: 2px;
+            width: fit-content;
+        }
+
+        .badge.win {
+            background: var(--green-soft);
+            color: var(--green);
+            border: 1px solid rgba(82, 227, 164, .35);
+        }
+
+        .badge.neutral {
+            background: var(--slate-soft);
+            color: var(--slate);
+            border: 1px solid rgba(122, 156, 201, .3);
+        }
+
+        /* ---------- Stage ---------- */
+        .stage {
+            position: relative;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background:
+                radial-gradient(ellipse 700px 420px at 50% 40%, #0c121c 0%, #070a0f 75%);
+            overflow: hidden;
+        }
+
+        .stage svg {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .stage-tag {
+            position: absolute;
+            top: 12px;
+            left: 14px;
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: .14em;
+            color: var(--text-faint);
+            text-transform: uppercase;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stage-tag .live {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--red);
+            box-shadow: 0 0 6px var(--red);
+        }
+
+        .stage-tag .live.done {
+            background: var(--green);
+            box-shadow: 0 0 6px var(--green);
+        }
+
+        /* ---------- Controls ---------- */
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            flex-wrap: wrap;
+        }
+
+        .transport {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 34px;
+            height: 34px;
+            background: var(--panel-2);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            color: var(--text);
+            cursor: pointer;
+            transition: border-color .15s, color .15s, background .15s;
+        }
+
+        .btn:hover {
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .btn:active {
+            transform: translateY(1px);
+        }
+
+        .btn.play {
+            width: 44px;
+            height: 34px;
+            background: linear-gradient(180deg, #1a2230, #141922);
+            border-color: #2a3444;
+        }
+
+        .btn.play:hover {
+            border-color: var(--green);
+            color: var(--green);
+        }
+
+        .btn svg {
+            width: 14px;
+            height: 14px;
+        }
+
+        .scrub {
+            flex: 1;
+            min-width: 160px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .scrub input[type=range] {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--line);
+            outline: none;
+        }
+
+        .scrub input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--cyan);
+            box-shadow: 0 0 10px rgba(91, 227, 238, .7);
+            cursor: pointer;
+            border: 2px solid #06232a;
+            margin-top: -5px;
+        }
+
+        .scrub input[type=range]::-moz-range-thumb {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--cyan);
+            border: 2px solid #06232a;
+            box-shadow: 0 0 10px rgba(91, 227, 238, .7);
+            cursor: pointer;
+        }
+
+        .scrub .tickread {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--text-dim);
+            min-width: 64px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .speedgroup {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .speedgroup .chip {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 6px 10px;
+            border-radius: 7px;
+            border: 1px solid var(--line);
+            background: var(--panel-2);
+            color: var(--text-dim);
+            cursor: pointer;
+            transition: all .15s;
+        }
+
+        .speedgroup .chip.active {
+            color: var(--cyan);
+            border-color: rgba(91, 227, 238, .45);
+            background: var(--cyan-soft);
+        }
+
+        .speedgroup .chip:hover {
+            color: var(--text);
+        }
+
+        .togglewrap {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-dim);
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .togglewrap input {
+            accent-color: var(--cyan);
+            width: 13px;
+            height: 13px;
+            cursor: pointer;
+        }
+
+        /* ---------- Legend ---------- */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            padding: 12px 16px;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: var(--panel);
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+
+        .legend .group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .legend .divider {
+            width: 1px;
+            align-self: stretch;
+            background: var(--line);
+        }
+
+        .swatch {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            box-shadow: 0 0 6px currentColor;
+            flex: none;
+        }
+
+        .swatch.sq {
+            border-radius: 2px;
+            box-shadow: none;
+        }
+
+        footer {
+            text-align: center;
+            font-family: var(--mono);
+            font-size: 10.5px;
+            color: var(--text-faint);
+            padding-top: 4px;
+            letter-spacing: .04em;
+        }
+
+        footer a {
+            color: var(--text-faint);
+        }
+
+        @media (max-width:640px) {
+            .hud {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .map-picker {
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+
+        <header>
+            <div class="brand">
+                <div class="eyebrow"><span class="dot"></span>Fly-In &nbsp;·&nbsp; Multi-Drone Routing Simulator</div>
+                <h1>AIRSPACE<span>&nbsp;CONTROL</span></h1>
+                <div class="subtitle">Live playback of the project's own time-expanded A* scheduler — real output from
+                    <code>Dispatcher</code>, not a mock-up. Pick a map to watch the fleet route itself from start hub to
+                    goal.</div>
+            </div>
+            <div class="map-picker">
+                <label for="mapSelect">Map</label>
+                <select id="mapSelect"></select>
+            </div>
+        </header>
+
+        <div class="hud">
+            <div class="cell">
+                <div class="label">Turn</div>
+                <div class="value accent-cyan"><span id="hudTick">0</span><span class="sub">/ <span
+                            id="hudTotalTicks">0</span></span></div>
+            </div>
+            <div class="cell">
+                <div class="label">Delivered</div>
+                <div class="value accent-green"><span id="hudDelivered">0</span><span class="sub">/ <span
+                            id="hudDrones">0</span> drones</span></div>
+            </div>
+            <div class="cell">
+                <div class="label">Total Turns</div>
+                <div class="value"><span id="hudTotalTurns">0</span></div>
+                <div class="badge win" id="hudTargetBadge">vs target</div>
+            </div>
+            <div class="cell">
+                <div class="label">Avg / Drone</div>
+                <div class="value"><span id="hudAvg">0</span></div>
+            </div>
+            <div class="cell">
+                <div class="label">Nodes · Edges</div>
+                <div class="value"><span id="hudNodes">0</span><span class="sub">· <span id="hudEdges">0</span></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="stage" id="stage">
+            <div class="stage-tag"><span class="live" id="liveDot"></span><span id="liveLabel">SIMULATING</span></div>
+            <svg class="container"></svg>
+        </div>
+
+        <div class="controls">
+            <div class="transport">
+                <button class="btn" id="btnRestart" title="Restart">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon points="19 20 9 12 19 4 19 20" />
+                        <line x1="5" y1="19" x2="5" y2="5" />
+                    </svg>
+                </button>
+                <button class="btn" id="btnStepBack" title="Previous turn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon points="19 20 9 12 19 4 19 20" />
+                    </svg>
+                </button>
+                <button class="btn play" id="btnPlay" title="Play / Pause">
+                    <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor">
+                        <polygon points="6 3 20 12 6 21 6 3" />
+                    </svg>
+                    <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none">
+                        <rect x="5" y="3" width="5" height="18" />
+                        <rect x="14" y="3" width="5" height="18" />
+                    </svg>
+                </button>
+                <button class="btn" id="btnStepFwd" title="Next turn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polygon points="5 4 15 12 5 20 5 4" />
+                    </svg>
+                </button>
+            </div>
+
+            <div class="scrub">
+                <input type="range" id="scrubber" min="0" max="1" step="1" value="0">
+                <div class="tickread"><span id="scrubTick">0</span> / <span id="scrubMax">0</span></div>
+            </div>
+
+            <div class="speedgroup" id="speedGroup">
+                <span class="chip" data-speed="0.5">0.5×</span>
+                <span class="chip active" data-speed="1">1×</span>
+                <span class="chip" data-speed="2">2×</span>
+                <span class="chip" data-speed="4">4×</span>
+            </div>
+
+            <label class="togglewrap"><input type="checkbox" id="toggleIds" checked>Drone IDs</label>
+            <label class="togglewrap"><input type="checkbox" id="toggleTrails" checked>Trails</label>
+        </div>
+
+        <div class="legend">
+            <div class="group"><span class="swatch" style="background:var(--slate);color:var(--slate)"></span>Normal (1
+                turn)</div>
+            <div class="group"><span class="swatch" style="background:var(--amber);color:var(--amber)"></span>Restricted
+                (2 turns)</div>
+            <div class="group"><span class="swatch" style="background:var(--cyan);color:var(--cyan)"></span>Priority
+                (preferred)</div>
+            <div class="group"><span class="swatch sq"
+                    style="background:repeating-linear-gradient(45deg,#3a2530,#3a2530 3px,#241318 3px,#241318 6px)"></span>Blocked
+            </div>
+            <div class="divider"></div>
+            <div class="group"><span class="swatch" style="background:var(--green);color:var(--green)"></span>Start /
+                Goal</div>
+            <div class="group">◆ occupancy shown as n/m under each zone</div>
+            <div class="group">flowing chevrons = active corridor</div>
+        </div>
+
+        <footer>Rendered from real <span style="color:var(--text-dim)">Dispatcher</span> / <span
+                style="color:var(--text-dim)">SpaceTimeAStar</span> output · Fly-In project visualizer</footer>
+
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+</html>
