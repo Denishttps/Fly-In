@@ -112,7 +112,7 @@ class SpaceTimeSearch(ABC):
                 if move_g < g_score.get(move_state, float("inf")):
                     g_score[move_state] = move_g
                     came_from[move_state] = (
-                        state, "move", f"{node.name}_{neighbor.name}"
+                        state, "move", f"{node.name}-{neighbor.name}"
                     )
                     counter += 1
                     heapq.heappush(

@@ -1,3 +1,5 @@
+// ===================== Геометрия / отрисовка графа =====================
+
 function createLine(container, x1, y1, x2, y2) {
     const ns = "http://www.w3.org/2000/svg";
 
@@ -134,7 +136,105 @@ function createNode(container, node, scale, labelPlan, radius = 10) {
     }
 }
 
+// ===================== Состояние графа (кэш для анимации дронов) =====================
+
+let nodeByName = new Map();
+// ключ "sourceName_targetName" -> { source: nodeObj, target: nodeObj }
+let edgeByConnectionName = new Map();
+let currentScale = null;
+let currentPlayback = null; // { stop() } — активная анимация, чтобы можно было остановить при смене карты
+
+// ===================== Определение позиции дрона по тику =====================
+
+function resolveDronePosition(drone, scale) {
+    // Дрон стоит в узле
+    if (drone.node_name) {
+        const node = nodeByName.get(drone.node_name);
+        if (!node) return null;
+        return scale(node.x, node.y);
+    }
+
+    // Дрон "завис" на ребре (например, ждёт слот в restricted-зоне).
+    // Явного прогресса вдоль ребра API не даёт, поэтому рисуем дрона
+    // в середине ребра — при последовательных тиках на одном и том же
+    // connection_name дрон просто визуально останется в этой точке,
+    // что само по себе читается как "ожидание в очереди".
+    if (drone.connection_name) {
+        const edge = edgeByConnectionName.get(drone.connection_name);
+        if (!edge) return null;
+        const p1 = scale(edge.source.x, edge.source.y);
+        const p2 = scale(edge.target.x, edge.target.y);
+        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+
+    return null;
+}
+
+// ===================== Анимация дронов по history =====================
+
+function playHistory(history, dronesLayer, scale, tickDuration = 700) {
+    const ns = "http://www.w3.org/2000/svg";
+    const droneEls = new Map();
+
+    function getOrCreateDrone(id) {
+        if (droneEls.has(id)) return droneEls.get(id);
+        const c = document.createElementNS(ns, "circle");
+        c.setAttribute("r", 5);
+        c.setAttribute("fill", "#e94b3c");
+        c.setAttribute("stroke", "#ffffff");
+        c.setAttribute("stroke-width", "1.5");
+        c.style.transition =
+            `cx ${tickDuration * 0.9}ms linear, ` +
+            `cy ${tickDuration * 0.9}ms linear, ` +
+            `opacity 0.3s ease`;
+        dronesLayer.appendChild(c);
+        droneEls.set(id, c);
+        return c;
+    }
+
+    let tickIndex = 0;
+    let playing = true;
+    let timeoutId = null;
+
+    function runTick() {
+        if (!playing || tickIndex >= history.length) return;
+        const tick = history[tickIndex];
+
+        for (const drone of tick.drones) {
+            const circle = getOrCreateDrone(drone.drone_id);
+            const pos = resolveDronePosition(drone, scale);
+            if (!pos) continue;
+
+            circle.setAttribute("cx", pos.x);
+            circle.setAttribute("cy", pos.y);
+            circle.style.opacity = drone.is_finished ? "0.25" : "1";
+        }
+
+        tickIndex++;
+        if (tickIndex < history.length) {
+            timeoutId = setTimeout(runTick, tickDuration);
+        }
+    }
+
+    runTick();
+
+    return {
+        stop() {
+            playing = false;
+            if (timeoutId) clearTimeout(timeoutId);
+        },
+    };
+}
+
+// ===================== Основной сценарий: загрузка + статичный граф + анимация =====================
+
 async function generateGraph() {
+    // если предыдущая анимация ещё играет — останавливаем её перед перерисовкой
+    if (currentPlayback) {
+        currentPlayback.stop();
+        currentPlayback = null;
+    }
+
     const maps_el = document.querySelector("#maps");
     const response = await fetch("http://127.0.0.1:8000" + "/api/v1/simulation?path=" + maps_el.value);
     const container = document.querySelector('.container');
@@ -147,12 +247,24 @@ async function generateGraph() {
     const bounds = getBounds(nodes);
 
     const scale = createScaler(bounds, container.clientWidth, container.clientHeight, 100);
+    currentScale = scale;
 
+    nodeByName.clear();
+    edgeByConnectionName.clear();
+    nodes.forEach(n => nodeByName.set(n.name, n));
+
+    // Рёбра рисуются один раз — статично, без анимации.
     for (let i = 0; i < edges.length; i++) {
-        let point1 = scale(edges[i].source.x, edges[i].source.y);
-        let point2 = scale(edges[i].target.x, edges[i].target.y);
+        const e = edges[i];
+        let point1 = scale(e.source.x, e.source.y);
+        let point2 = scale(e.target.x, e.target.y);
 
         createLine(container, point1.x, point1.y, point2.x, point2.y);
+
+        // индексируем connection_name в обе стороны — на случай, если
+        // симулятор допускает проход по ребру в направлении target -> source
+        edgeByConnectionName.set(`${e.source.name}_${e.target.name}`, { source: e.source, target: e.target });
+        edgeByConnectionName.set(`${e.target.name}_${e.source.name}`, { source: e.target, target: e.source });
     }
 
     const labelPlan = planLabels(nodes, scale);
@@ -160,22 +272,31 @@ async function generateGraph() {
     for (let i = 0; i < nodes.length; i++) {
         createNode(container, nodes[i], scale, labelPlan);
     }
+
+    // Отдельный слой поверх статичного графа — сюда рисуются только дроны.
+    const ns = "http://www.w3.org/2000/svg";
+    const dronesLayer = document.createElementNS(ns, "g");
+    dronesLayer.setAttribute("class", "drones-layer");
+    container.appendChild(dronesLayer);
+
+    if (Array.isArray(data.history) && data.history.length > 0) {
+        currentPlayback = playHistory(data.history, dronesLayer, scale);
+    }
 }
+
+// ===================== Выбор карты =====================
 
 function createOptionMap(map) {
     const optGroup = document.createElement("optgroup");
     optGroup.label = map[0].group;
 
-    
-    for (let i = 0; i < map.length; i++)
-        {
-            const opt = document.createElement("option");
-            opt.textContent = map[i].name;
-            opt.value = map[i].path;
-            opt.classList.add("elMap");
-            optGroup.appendChild(opt);
-        }
-    console.log(optGroup)
+    for (let i = 0; i < map.length; i++) {
+        const opt = document.createElement("option");
+        opt.textContent = map[i].name;
+        opt.value = map[i].path;
+        opt.classList.add("elMap");
+        optGroup.appendChild(opt);
+    }
     return optGroup;
 }
 
@@ -187,25 +308,20 @@ async function createMapsChoose() {
     if (data.length == 0) {
         return null;
     }
-    
+
     let groups = {};
 
-    for (let i = 0; i < data.length; i++)
-    {
+    for (let i = 0; i < data.length; i++) {
         let name = data[i].group;
-        if (name in groups)
-        {
+        if (name in groups) {
             groups[name].push(data[i]);
-        }
-        else
-        {
+        } else {
             groups[name] = [data[i]];
         }
     }
 
     for (const key in groups) {
         let optGr = createOptionMap(groups[key]);
-        console.log(optGr);
         if (maps_el) {
             maps_el.appendChild(optGr);
         } else {

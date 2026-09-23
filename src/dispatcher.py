@@ -1,3 +1,5 @@
+from rich import print
+
 from core.drone_planner import DronePlanner
 from core.search.astar import AStarSearch
 
@@ -9,6 +11,8 @@ from core.utils.init_drones import init_drones
 
 from core.models.reservation import ReservationTable
 from core.models.plan_models import DronePlan
+
+from core.utils.color import set_color
 
 
 class Dispatcher:
@@ -99,6 +103,17 @@ class Dispatcher:
             return info.connection_name
         return info.node_name
 
+    def _get_color(self, info: DroneTickInfo) -> tuple[str | None, str | None]:
+        if info.node_name:
+            node = self.graph.get_node(info.node_name)
+            return node.metadata.color, None
+        raw = info.connection_name.split("-", maxsplit=1)
+        src = self.graph.get_node(raw[0])
+        target = self.graph.get_node(raw[1])
+        return (
+            src.metadata.color, target.metadata.color
+        )
+
     def _format_tick_line(self, tick: TickResult) -> str | None:
         moves = []
 
@@ -109,7 +124,9 @@ class Dispatcher:
 
             prev = self._prev_positions.get(info.drone_id)
             if token != prev:
-                moves.append(f"D{info.drone_id}-{token}")
+                color = self._get_color(info)
+                s = set_color(f"D{info.drone_id}-{token}", colors=color)
+                moves.append(s)
 
             self._prev_positions[info.drone_id] = token
 

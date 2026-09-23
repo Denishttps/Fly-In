@@ -11,7 +11,7 @@ def init_app(
     reload: bool = False,
     **kwargs
 ) -> None:
-    uvicorn.run(app, host=host, port=port, reload=reload, **kwargs)
+    uvicorn.run(app, host=host, port=port, **kwargs)
 
 
 def main():
@@ -38,7 +38,7 @@ def main():
         init_app()
     else:
         if not args.path:
-            raise argparse.ArgumentError()
+            parser.error("Missing argument: --path")
         dp = Dispatcher(args.path)
         dp.print_simulation()
 
