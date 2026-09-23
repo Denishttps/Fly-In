@@ -21,7 +21,7 @@ class GraphFactory:
                 hub.name,
                 hub.x,
                 hub.y,
-                NodeMetaData(**metadata)
+                NodeMetaData(**metadata)  # type: ignore[arg-type]
             )
             graph.add_node(node, is_start=hub.is_start, is_end=hub.is_end)
 

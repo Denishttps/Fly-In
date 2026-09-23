@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from .edge import Edge
 from .node import Node
 
+from .node import ZoneType  # type: ignore[attr-defined]
+
 
 UNLIMITED = 999_999
 
@@ -28,8 +30,6 @@ class ReservationTable:
         return self._node_occupancy.get((node.name, tick), 0)
 
     def is_node_free(self, node: Node, tick: int) -> bool:
-        from .node import ZoneType  # local import: avoid a cycle
-
         if node.metadata.zone == ZoneType.BLOCKED:
             return False
         return self.node_load(node, tick) < self._node_capacity(node)

@@ -48,7 +48,7 @@ class Dispatcher:
     def _get_zero_tick(self, drone: DronePlan) -> DroneTickInfo:
         return DroneTickInfo(
             drone.drone_id,
-            self.graph.start_node.name
+            self.graph.start_node.name  # type: ignore[union-attr]
         )
 
     def _build_history_from_plans(self) -> list[TickResult]:
@@ -107,7 +107,9 @@ class Dispatcher:
         if info.node_name:
             node = self.graph.get_node(info.node_name)
             return node.metadata.color, None
-        raw = info.connection_name.split("-", maxsplit=1)
+        raw = info.connection_name.split(  # type: ignore[union-attr]
+            "-", maxsplit=1
+        )
         src = self.graph.get_node(raw[0])
         target = self.graph.get_node(raw[1])
         return (

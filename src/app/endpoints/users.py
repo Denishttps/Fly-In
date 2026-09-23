@@ -9,7 +9,7 @@ templates = Jinja2Templates(directory="templates")
 
 
 @router.get("/", response_class=HTMLResponse)
-def home_page(request: Request):
+def home_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
         request=request,
         name="index.html"

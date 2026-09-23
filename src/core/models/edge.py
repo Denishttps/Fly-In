@@ -36,7 +36,7 @@ class Edge:
             f"max_capacity={self.max_capacity})"
         )
 
-    def __eq__(self, value: "Edge") -> bool:
+    def __eq__(self, value: object) -> bool:
         if not isinstance(value, Edge):
             return False
         return (

@@ -46,7 +46,7 @@ class SimulationService:
                 FileDTO(
                     name=file.name,
                     group=file.parent.name,
-                    path=file.as_posix()
+                    path=file.as_posix()  # type: ignore[arg-type]
                 )
             )
 

@@ -1,4 +1,4 @@
-import webcolors
+import webcolors  # type: ignore[import-not-found]
 
 
 def rgb_to_hex_bytes(rgb: tuple[int, int, int]) -> str:
@@ -20,8 +20,8 @@ def set_color(text: str, colors: tuple[str | None, str | None]) -> str:
         color1 = webcolors.name_to_rgb(c1)
         color2 = webcolors.name_to_rgb(c2)
 
-        color = tuple((a + b) // 2 for a, b in zip(color1, color2))
+        color_rgb = tuple((a + b) // 2 for a, b in zip(color1, color2))
     except Exception:
-        color = (255, 255, 255)
-    color = rgb_to_hex_bytes(color)
+        color_rgb = (255, 255, 255)
+    color = rgb_to_hex_bytes(color_rgb)
     return f"[{color}]{text}[/{color}]"
