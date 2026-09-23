@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from .edge import Edge
 from .node import Node
 
-from .node import ZoneType  # type: ignore[attr-defined]
+from .zone_type import ZoneType
 
 
 UNLIMITED = 999_999

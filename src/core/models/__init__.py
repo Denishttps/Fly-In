@@ -7,12 +7,11 @@ from .graph import Graph
 from .map import MapData, RawConnection, RawHub
 from .node import NodeMetaData, Node
 
-from .plan_models import (  # type: ignore[attr-defined]
-    DroneTickInfo, DronePlan, PlannedStep
-)
+from .plan_models import DronePlan, PlannedStep
 from .reservation import ReservationTable
 
 from .zone_type import ZoneType
+from .tick_models import DroneTickInfo
 
 
 __all__ = [

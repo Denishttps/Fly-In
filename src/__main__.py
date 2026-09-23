@@ -1,5 +1,5 @@
 import argparse
-import uvicorn  # type: ignore[import-not-found]
+import uvicorn
 
 from dispatcher import Dispatcher
 from app import app
@@ -10,10 +10,9 @@ from typing import Any
 def init_app(
     host: str = "127.0.0.1",
     port: int = 8000,
-    reload: bool = False,
     **kwargs: dict[str, Any]
 ) -> None:
-    uvicorn.run(app, host=host, port=port, **kwargs)
+    uvicorn.run(app, host=host, port=port, **kwargs)  # type: ignore[arg-type]
 
 
 def main() -> None:

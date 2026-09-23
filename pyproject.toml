@@ -13,3 +13,8 @@ dependencies = [
     "rich>=15.0.0",
     "webcolors>=25.10.0",
 ]
+
+
+[[tool.mypy.overrides]]
+module = "webcolors.*"
+ignore_missing_imports = true

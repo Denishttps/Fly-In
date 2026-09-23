@@ -1,4 +1,4 @@
-import webcolors  # type: ignore[import-not-found]
+import webcolors
 
 
 def rgb_to_hex_bytes(rgb: tuple[int, int, int]) -> str:
