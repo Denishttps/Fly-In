@@ -1,7 +1,7 @@
 from .drone import Drone
 from .edge import Edge
 
-from .tick_models import TickResult
+from .tick_models import TickResult, DroneTickInfo
 from .graph import Graph
 
 from .map import MapData, RawConnection, RawHub
@@ -11,7 +11,6 @@ from .plan_models import DronePlan, PlannedStep
 from .reservation import ReservationTable
 
 from .zone_type import ZoneType
-from .tick_models import DroneTickInfo
 
 
 __all__ = [
