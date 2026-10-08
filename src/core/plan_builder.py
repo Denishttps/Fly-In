@@ -44,9 +44,8 @@ class PlanBuilder:
                 from_node = self.graph.get_node(from_name)
                 edge = from_node.get_edge_to(to_node)
                 assert edge is not None
-                duration = to_tick - from_tick
 
-                self.reservations.reserve_edge(edge, from_tick + 1, duration)
+                self.reservations.reserve_edge(edge, from_tick + 1, 1)
                 self.reservations.reserve_node(to_node, to_tick)
 
                 for mid_tick in range(from_tick + 1, to_tick):

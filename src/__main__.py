@@ -1,8 +1,11 @@
 import argparse
+import sys
 import uvicorn
 
 from dispatcher import Dispatcher
 from app import app
+
+from core.errors import MapNotFound, NoPlanFoundError, ParseError
 
 from typing import Any
 
@@ -40,8 +43,24 @@ def main() -> None:
     else:
         if not args.path:
             parser.error("Missing argument: --path")
-        dp = Dispatcher(args.path)
-        dp.print_simulation()
+        try:
+            dp = Dispatcher(args.path)
+            dp.print_simulation()
+        except ParseError as e:
+            print(str(e), file=sys.stderr)
+            sys.exit(1)
+        except (MapNotFound, FileNotFoundError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except (NoPlanFoundError, ValueError, KeyError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except IsADirectoryError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except OSError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

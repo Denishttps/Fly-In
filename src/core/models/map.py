@@ -16,6 +16,7 @@ class RawConnection:
     source: str
     target: str
     max_capacity: int = 1
+    line_no: int = 0
 
 
 @dataclass

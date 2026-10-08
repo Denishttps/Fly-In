@@ -1,5 +1,4 @@
 from typing import TYPE_CHECKING
-from core.models.zone_type import ZoneType
 
 if TYPE_CHECKING:
     from .node import Node
@@ -18,10 +17,6 @@ class Edge:
 
         self.source.edges.append(self)
         self.target.edges.append(self)
-
-    @property
-    def travel_cost(self) -> int:
-        return 2 if self.target.metadata.zone == ZoneType.RESTRICTED else 1
 
     def get_opposite(self, node: "Node") -> "Node":
         if node == self.source:

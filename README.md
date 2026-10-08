@@ -4,7 +4,7 @@
 
 # Fly-In 🚁
 
-A multi-drone routing simulator that computes conflict-free paths for a fleet of drones navigating from a shared start zone to a shared goal zone across a directed graph of interconnected hubs. The program supports both a terminal output mode and an interactive web visualizer.
+A multi-drone routing simulator that computes conflict-free paths for a fleet of drones navigating from a shared start zone to a shared goal zone across an undirected graph of interconnected hubs. The program supports both a terminal output mode and an interactive web visualizer.
 
 ---
 
@@ -23,12 +23,12 @@ The simulator plans every drone's full path before the simulation begins (offlin
 
 ### Zone Types
 
-| Type | Base Cost | Behavior |
-|---|---|---|
-| `normal` | 1 turn | Standard movement |
-| `priority` | 0.8 turns | Preferred routing (faster heuristic) |
-| `restricted` | 2 turns | Traversal takes two ticks |
-| `blocked` | ∞ | Impassable — never routed through |
+| Type | Behavior |
+|---|---|
+| `normal` | Standard movement (1 turn per move) |
+| `priority` | Preferred in pathfinding ties; moves cost 1 turn |
+| `restricted` | Traversal takes two ticks (link is reserved for 1 tick) |
+| `blocked` | Impassable — never routed through |
 
 ---
 
@@ -48,17 +48,13 @@ The core routing engine is **Space-Time A\***, a generalisation of A\* that oper
 
 A global `ReservationTable` tracks which hubs and edges are already reserved at each future tick. When planning drone *k*, the paths of drones *1 … k-1* are already locked in the table, so drone *k*'s search is automatically steered around them. Reservations are made at:
 - **Nodes:** one entry per `(hub_name, tick)` slot, enforcing `max_drones` capacity.
-- **Edges:** one entry per `(frozenset{src, dst}, tick)` slot over the full traversal duration, enforcing `max_link_capacity`.
+- **Edges:** one entry per `(frozenset{src, dst}, tick)` slot for the departure tick, enforcing `max_link_capacity`. The link is freed on the arrival tick, so the next drone may start crossing it in the same tick another drone arrives (this applies to `restricted` moves as well, which occupy the link for 1 tick while the drone itself needs 2 ticks to arrive).
 
 This **Prioritised Planning** approach (sequential, offline, ordered by drone ID) is computationally light and produces collision-free plans with no need for re-planning — at the cost of not guaranteeing a globally optimal solution.
 
-### Step-Cost Function
+### Pathfinding Priority
 
-The step cost from hub *u* to hub *v* combines:
-1. The **base cost** of the target zone (`restricted` = 2, `priority` = 0.8, `normal` = 1).
-2. A **capacity delay** `k / throughput`, where `k` is how many times the hub has been targeted by already-planned drones and `throughput = min(max_drones_u, max_link_capacity, max_drones_v)`.
-
-This biases later drones away from congested hubs without requiring re-planning.
+The search heap orders states by `(f, non_priority_steps, counter)`, where `f = g + h` with an integer `g` (ticks spent) and the Dijkstra-based heuristic `h`. Between equal-cost routes, the one crossing fewer non-`priority` hubs wins, so `priority` zones are genuinely preferred without changing move costs.
 
 ---
 
@@ -90,7 +86,7 @@ This visual mode is especially useful for understanding how the planner resolves
 
 ### Requirements
 
-- Python 3.13+
+- Python 3.10+
 - [`uv`](https://github.com/astral-sh/uv) (recommended) or `pip`
 
 ### Installation
@@ -104,21 +100,23 @@ uv sync          # installs all dependencies from uv.lock
 Or with pip:
 
 ```bash
-pip install fastapi[all] rich argparse pydantic webcolors
+pip install "fastapi[all]" rich pydantic webcolors
 ```
 
 ### Running — Terminal Mode
 
 ```bash
-python -m src --path maps/easy/01_linear_path.txt
-python -m src --path maps/medium/02_circular_loop.txt
-python -m src --path maps/hard/03_ultimate_challenge.txt
+python src/__main__.py --path maps/easy/01_linear_path.txt
+python src/__main__.py --path maps/medium/02_circular_loop.txt
+python src/__main__.py --path maps/hard/03_ultimate_challenge.txt
 ```
+
+(Or with uv: `uv run python src/__main__.py --path <map>`.)
 
 ### Running — Web Interface
 
 ```bash
-python -m src --web
+python src/__main__.py --web
 ```
 
 Then open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser, choose a map from the dropdown and click **Generate**.
@@ -144,14 +142,16 @@ connection: <hub_a>-<hub_b> [<metadata>]
 | Key | Default | Description |
 |---|---|---|
 | `color` | none | Display colour (CSS name, e.g. `green`) |
-| `max_drones` | 1 | Max simultaneous drones in this zone (`-1` = unlimited) |
+| `max_drones` | 1 | Max simultaneous drones in this zone (positive integer; `start`/`end` zones are unlimited) |
 | `zone` | `normal` | Zone type: `normal`, `priority`, `restricted`, `blocked` |
 
 **Connection metadata:**
 
 | Key | Default | Description |
 |---|---|---|
-| `max_link_capacity` | 1 | Max simultaneous drones on this link |
+| `max_link_capacity` | 1 | Max simultaneous drones on this link (positive integer) |
+
+Zone names may only contain letters, digits and underscores (no `-`, since `-` separates the two ends of a connection). Self-connections (`a-a`) are rejected. Any malformed line (unknown directive, bad coordinates, non-positive numbers, unknown metadata keys, duplicate zones or connections, references to undefined zones, missing `nb_drones`/`start`/`end`) stops the program with an error message and exit code 1.
 
 ---
 
@@ -178,16 +178,13 @@ Two drones travel a linear chain. Because `max_drones` defaults to 1 per hub, th
 ### Expected Output (terminal)
 
 ```
-D1-start-waypoint1 D2-start
-D1-waypoint1 D2-start-waypoint1
-D1-waypoint1-waypoint2 D2-waypoint1
-D1-waypoint2 D2-waypoint1-waypoint2
-D1-waypoint2-goal D2-waypoint2
-D1-goal D2-waypoint2-goal
+D1-waypoint1
+D1-waypoint2 D2-waypoint1
+D1-goal D2-waypoint2
 D2-goal
 ```
 
-Each token is printed in the colour of the hub or the blended colour of the transition. Ticks where nothing moves are omitted.
+The initial positions (`D1-start D2-start` at tick 0) are not printed: each output line corresponds to one simulation turn with movement. Each token is printed in the colour of the hub or the blended colour of the transition. Ticks where nothing moves are omitted.
 
 ### Input — `maps/easy/02_simple_fork.txt`
 
@@ -224,13 +221,13 @@ fly-in/
 │   │   ├── schemas/         # Pydantic request/response models
 │   │   └── services/        # SimulationService
 │   └── core/
-│       ├── parser.py        # Map text parser
+│       ├── parser.py        # Strict map text parser (ParseError on bad input)
 │       ├── graph_factory.py # Builds Graph from parsed data
 │       ├── drone_planner.py # Plans a single drone's route
 │       ├── plan_builder.py  # Reconstructs DronePlan from came_from map
 │       ├── models/          # Node, Edge, Graph, Drone, Reservation, Plan
-│       ├── search/          # SpaceTimeSearch base, A*, Dijkstra
-│       └── utils/           # Distance pre-computation, colour blending, map loader
+│       ├── search/          # SpaceTimeSearch base, A*
+│       └── utils/           # MapLoader, DroneFactory, DistanceCalculator, ColorFormatter
 ├── maps/                    # Bundled test maps (easy / medium / hard / challenger)
 ├── static/                  # Web frontend (script.js, style.css)
 ├── templates/               # Jinja2 HTML template

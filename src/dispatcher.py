@@ -1,25 +1,25 @@
-from rich import print
+from rich.console import Console
 
 from core.drone_planner import DronePlanner
 from core.search.astar import AStarSearch
 
-from core.utils.load_map import load_map_from_file
+from core.utils.load_map import MapLoader
 from core.errors import MapNotFound
 
 from core.models.tick_models import TickResult, DroneTickInfo
-from core.utils.init_drones import init_drones
+from core.utils.init_drones import DroneFactory
 
 from core.models.reservation import ReservationTable
 from core.models.plan_models import DronePlan
 
-from core.utils.color import set_color
+from core.utils.color import ColorFormatter
 
 
 class Dispatcher:
     def __init__(self, file_path: str) -> None:
         try:
-            self.count, self.graph = load_map_from_file(file_path)
-            self.drones = init_drones(self.count, self.graph)
+            self.count, self.graph = MapLoader.load_map_from_file(file_path)
+            self.drones = DroneFactory.create(self.count)
         except FileNotFoundError:
             raise MapNotFound(f"Map {file_path} is not exists")
 
@@ -127,7 +127,9 @@ class Dispatcher:
             prev = self._prev_positions.get(info.drone_id)
             if token != prev:
                 color = self._get_color(info)
-                s = set_color(f"D{info.drone_id}-{token}", colors=color)
+                s = ColorFormatter.set_color(
+                    f"D{info.drone_id}-{token}", colors=color
+                )
                 moves.append(s)
 
             self._prev_positions[info.drone_id] = token
@@ -142,10 +144,13 @@ class Dispatcher:
 
     def print_simulation(self) -> list[TickResult]:
         self._prev_positions = {}
+        console = Console(highlight=False)
 
         for tick_result in self._history:
             line = self._format_tick_line(tick_result)
+            if tick_result.tick == 0:
+                continue
             if line is not None:
-                print(line)
+                console.print(line, soft_wrap=True)
 
         return self._history

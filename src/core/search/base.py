@@ -22,6 +22,11 @@ class SpaceTimeSearch(ABC):
     def cost_lower_bound(self, node_name: str) -> float:
         return 0.0
 
+    def _is_priority(self, node_name: str) -> bool:
+        return (
+            self.graph.get_node(node_name).metadata.zone == ZoneType.PRIORITY
+        )
+
     def search(
         self,
         start_name: str,
@@ -36,19 +41,21 @@ class SpaceTimeSearch(ABC):
         closed: set[State] = set()
 
         counter = 0
-        open_heap: list[tuple[float, float, int, str, int]] = [
+        open_heap: list[tuple[float, int, int, str, int]] = [
             (
                 self._priority(start_name, 0.0),
-                0.0,
+                0,
                 counter,
                 start_name,
                 start_tick,
             )
         ]
+        best_np: dict[State, int] = {(start_name, start_tick): 0}
 
         while open_heap:
-            _, g, _, node_name, tick = heapq.heappop(open_heap)
+            _, np_count, _, node_name, tick = heapq.heappop(open_heap)
             state: State = (node_name, tick)
+            g = g_score[state]
 
             if state in closed:
                 continue
@@ -65,17 +72,22 @@ class SpaceTimeSearch(ABC):
             if self.reservations.is_node_free(node, tick + 1):
                 wait_state: State = (node_name, tick + 1)
                 wait_g = g + 1.0
-                if wait_state not in closed and wait_g < g_score.get(
-                    wait_state, float("inf")
+                if wait_state not in closed and (
+                    wait_g < g_score.get(wait_state, float("inf"))
+                    or (
+                        wait_g == g_score.get(wait_state, float("inf"))
+                        and np_count < best_np.get(wait_state, float("inf"))
+                    )
                 ):
                     g_score[wait_state] = wait_g
+                    best_np[wait_state] = np_count
                     came_from[wait_state] = (state, "wait", None)
                     counter += 1
                     heapq.heappush(
                         open_heap,
                         (
                             self._priority(node_name, wait_g),
-                            wait_g,
+                            np_count,
                             counter,
                             node_name,
                             tick + 1,
@@ -98,7 +110,7 @@ class SpaceTimeSearch(ABC):
                     continue
 
                 if not self.reservations.is_edge_free(
-                    edge, tick + 1, duration
+                    edge, tick + 1, 1
                 ):
                     continue
                 if not self.reservations.is_node_free(neighbor, arrival_tick):
@@ -109,8 +121,15 @@ class SpaceTimeSearch(ABC):
                     continue
 
                 move_g = g + duration
-                if move_g < g_score.get(move_state, float("inf")):
+                move_np = np_count + (
+                    0 if self._is_priority(neighbor.name) else 1
+                )
+                if move_g < g_score.get(move_state, float("inf")) or (
+                    move_g == g_score.get(move_state, float("inf"))
+                    and move_np < best_np.get(move_state, float("inf"))
+                ):
                     g_score[move_state] = move_g
+                    best_np[move_state] = move_np
                     came_from[move_state] = (
                         state, "move", f"{node.name}-{neighbor.name}"
                     )
@@ -119,7 +138,7 @@ class SpaceTimeSearch(ABC):
                         open_heap,
                         (
                             self._priority(neighbor.name, move_g),
-                            move_g,
+                            move_np,
                             counter,
                             neighbor.name,
                             arrival_tick,

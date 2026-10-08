@@ -60,10 +60,6 @@ class Graph:
             raise KeyError(f"Node '{name}' not found in graph")
         return self.nodes[name]
 
-    def reset_penalties(self) -> None:
-        for node in self.nodes.values():
-            node.usage_count = 0
-
     def __repr__(self) -> str:
         start = self.start_node.name if self.start_node else None
         end = self.end_node.name if self.end_node else None

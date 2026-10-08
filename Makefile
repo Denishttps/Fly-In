@@ -22,7 +22,7 @@ clean:
 	rm -rf .mypy_cache
 
 lint:
-	$(PYTHON) -m flake8 $(SRC)
+	$(PYTHON) -m flake8 .
 	$(PYTHON) -m mypy . \
 		--warn-return-any \
 		--warn-unused-ignores \
@@ -31,5 +31,5 @@ lint:
 		--check-untyped-defs
 
 lint-strict:
-	$(PYTHON) -m flake8 $(SRC)
+	$(PYTHON) -m flake8 .
 	$(PYTHON) -m mypy . --strict
